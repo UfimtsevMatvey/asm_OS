@@ -12,8 +12,8 @@ section .text
 %define BUF_segment 			0x0000
 %define BUF_FAT_segment 		0x0000
 %define BUF_FAT_offset 			0x0500
-%define STACK_offset			0x0200
-%define STACK_segment			0x0180
+%define STACK_offset		0x2000
+%define STACK_segment		0x1D00
 org 4000h
 ; Описание 21h прерывания
 ;1 Загрузить файл в память, dx:si - адресс имени, bx:cx - Адресс загрузки
@@ -26,17 +26,19 @@ org 4000h
 ;8 ?
 start:
 	cli
+	push ax
+	push cx
 	mov [cx_] , cx
 	mov [ax_] , ax
 	mov cx , cs
-	mov es , cx
+	;mov es , cx
 	mov	ds , cx
-	mov cx , STACK_segment
-	mov ss , cx
-	mov sp , STACK_offset
+	; mov cx , STACK_segment
+	; mov ss , cx
+	; mov sp , STACK_offset
+	pop cx
+	pop ax
 	sti
-	mov ax , word [ax_]
-	mov cx , word [cx_]
 	cmp ah , 01h
 	jz LOAD_PROGRAM
 	cmp ah , 02h
@@ -51,8 +53,6 @@ start:
 	jz GET_SIZE_FILE
 	cmp ah , 07h
 	jz DELETE_FILE
-	cmp ah , 08h
-	jz GO_TO_PROTECTED_MODE
 	iret
 LOAD_PROGRAM:
 	mov [Offset_file_name] , si
@@ -60,19 +60,21 @@ LOAD_PROGRAM:
 	mov [current_offset] , cx
 	mov [current_segment]  , bx
 	call Seach_and_load_file
-	jc Load_unsacssesfull
+	jc Load_unsacssesful
 	popf
 	clc
 	retf
-Load_unsacssesfull:
+Load_unsacssesful:
 	popf
 	retf
 RETURN_CONTROL:
 	iret
 WRITE_SECTOR_LBA:
+	mov ax, bx
 	call Write_sector
 	iret
 READ_SECTOR_LBA:
+	mov ax, dx
 	call Read_sector
 	iret
 WRITE_FILE:
@@ -112,8 +114,6 @@ Del_Unsecssesful:
 	popf
 	stc
 	retf
-GO_TO_PROTECTED_MODE:
-	iret
 
 ;=================================================
 Write_file:
@@ -249,83 +249,28 @@ Delete_file:
 	push bx
 	mov si , [Offset_file_name]
 	mov ax , [Size_FAT]
-	;add ax , [Size_root_dir]
 	call Seach_file
 	jc File_not_found_del
-	mov dx , word [Counter_sectors_root_dir]
+	mov dx , word [Counter_sectors_root_dir] ;offset addres sector about FAT
 	add dx , word [Size_FAT]
-	mov word [Current_sector_root_dir_2] , dx
+	mov word [Current_sector_root_dir_2] , dx ;real adress sector 
 
 	add di , 1Ah
 	mov ax , [es:di]
 	mov word [First_element_chain] , ax
 	sub di , 1Ah
-	;di - Адресс записи нужного файла
+	;di - ������	������ ������� �����
+	;�������� ������ � �����
 	mov ax , 0000h
 	push di
 	mov cx ,20h
 	cld
 	repe stosb
 	pop di
-	;После того как запись удалена
-	;Найдем последнею запись, и вставим ее на место удаленной
 	pop bx
-	mov ax , bx
-	mov cl , 10h
-	div cl
-	mov cl , ah
-	xor ah , ah
-	;inc ax
-	add ax , [Size_FAT]
-	mov [Current_sector_root_dir_1] , ax
-	push cx
-	push es
-	mov bx , BUF_offset + 200h
-	mov dx , BUF_segment
-	mov es , dx
-	mov cx , 01h
-	call Read_Sectors
-	mov si , BUF_offset + 200h
-	pop es
-	pop cx
-	mov ax , 20h
-	mul cl
-	add si , ax
-	mov cx , 20h
-	cld
-	repe movsb
-	;Проверим равенство секторов, в котором находится запись об удаляемом файле и в котором находится запись об последнем файле
-	;Если они равны то занули последню запись в
-	mov ax , [Current_sector_root_dir_1]
-	cmp ax , [Current_sector_root_dir_2]
-	jz sector_equ
-	mov ax , 0000h
-	sub si , 20h
-	mov di , si
-	mov cx , 20h
-	cld
-	repe stosb
-	jmp first_sector
-sector_equ:
-	mov ax , 0000h
-	sub si , 220h
-	mov di , si
-	mov cx , 20h
-	cld
-	repe stosb
-	jmp second_sector
-first_sector:
-	;Сохраним изменения в корневом каталоге
-	mov bx , BUF_offset + 200h
+	;�������� ��������� � �������� ��������
+	mov bx , BUF_offset; + 200h
 	mov ax , BUF_segment
-	mov es , ax
-	mov ax , word [Current_sector_root_dir_1]
-	mov cx , 01
-	call Write_sectors
-second_sector:
-	mov bx , BUF_FAT_offset
-	mov ax , BUF_FAT_segment
-	mov es , ax
 	mov ax , word [Current_sector_root_dir_2]
 	mov cx , 01h
 	call Write_sectors

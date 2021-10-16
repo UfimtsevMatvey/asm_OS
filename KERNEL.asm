@@ -17,8 +17,8 @@ org 2000h
 %define shell_segment 		0x2000
 %define First_DSM_offset	0x0000
 %define SETUP_ADDR 			0x2000
-%define STACK_offset		0x0000
-%define STACK_segment		0x2000
+%define STACK_offset		0x2000
+%define STACK_segment		0x1D00
 %define BUF_offset			0x0500
 %define BUF_segment 		0x0000
 %define BUF_FAT_segment 	0x0000
@@ -57,6 +57,7 @@ start:
 	mov ax , int_22h_segment
 	mov [current_segment] , ax
 	mov si , Interrapt_22h_file_name
+	;jmp LOAD_PROGRAM
 	call LOAD_PROGRAM
 ;======Initialization_intrrapt_22h==
 	mov ax , 00h
@@ -162,7 +163,7 @@ Load_file:
 	add ax , [Size_FAT]
 	push ax
 	xor ax , ax
-	mov es , ax
+	;mov es , ax
 	pop ax
 	sub ax , 2
 	mov cx , 01h
@@ -212,19 +213,28 @@ next_description:
 	jz File_found
 	pop di
 	pop si
-	add di , 20h
+	add di , 20h 
 	cmp di , 0x700
 	jz next_sector_root_dir
 	jmp next_description
 File_not_found:
 	mov si , File_error
 	stc
+	push ax
+	xor ax, ax
+	mov word [Counter_sectors_root_dir], ax
+	pop ax
 	ret
 File_found:
 	pop di
 	pop si
 	;sub di , 11
 	clc
+	
+	push ax
+	xor ax, ax
+	mov word [Counter_sectors_root_dir], ax
+	pop ax
 	ret
 ;=================================================
 
@@ -301,8 +311,8 @@ description_file 			dw 00h
 Size_root_dir 				dw 00h
 Size_FAT 					dw 00h
 Interrapt_21h_file_name 	db 'INT_21H SYS' , 00h
-Interrapt_22h_file_name		db 'INT_22h SYS' , 00h
-Interrapt_23h_file_name		db 'INT_23h SYS' , 00h
+Interrapt_22h_file_name		db 'INT_22H SYS' , 00h
+Interrapt_23h_file_name		db 'INT_23H SYS' , 00h
 Shell_file_name 			db 'SHELL   USR' , 00h
 
 test_name 					db 'TEST    TST' ,00h

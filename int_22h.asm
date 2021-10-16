@@ -1,7 +1,7 @@
 BITS 16
 section .text
-%define STACK_offset		0x0000
-%define STACK_segment		0x2000
+%define STACK_offset		0x2000
+%define STACK_segment		0x1D00
 org 0000h
 ; Описание 22h прерывания
 ;1 Печать стороки (es:di - адресс строки)
@@ -13,14 +13,8 @@ org 0000h
 ;7 ?
 start:
 	cli
-	mov [cx_] , cx
-	mov [ax_] , ax
-	mov cx , cs
-	;mov es , cx
-	mov	ds , cx
-	mov cx , STACK_segment
-	mov ss , cx
-	mov sp , STACK_offset
+	mov cx, cs
+	mov	ds, cx
 	sti
 	cmp ah, 1
 	jz Print_str
@@ -36,15 +30,19 @@ start:
 	
 	cmp ah, 6
 	jz Write_number_hex
-	
+return:
+	; cli
+	; mov ax, [ss_]
+	; mov ss, ax
+	; mov sp, [sp_]
+	; mov bp, [bp_]
+	; sti
 	iret
 	
 ;================================
 Print_str:
 	mov si, di
 ;Вывод строки на экран
-	mov ax, ds
-	mov [_DS], ax
 	mov ax, es
 	mov ds, ax
 print_char:
@@ -56,10 +54,7 @@ print_char:
 	int	10h
 	jmp	near print_char
 pr_exit:
-	popa
-	mov ax, [_DS]
-	mov ds, ax
-	ret
+	jmp return
 _DS dw 00h
 ;================================
 Read_str_1:
@@ -69,41 +64,32 @@ next_char:
 	xor ah, ah
 	int 16h
 	mov [es:bx], al
-	cmp ah, 0Dh;Enter - конец ввода
+	cmp ah, 1Ch;Enter - конец ввода
 	jz _end
 	add bx, 01h
-	jo next_segment
-next_segment:
-	mov ax, es
-	add ax, 1000h
-	mov es, ax
 	jmp near next_char
 _end:
 	popa
-	ret
+	jmp return
 ;================================
 Read_str_2:
 ;Ввод строки с эхо
-	pusha
 next_char_2:
 	xor ah, ah
 	int 16h
-	mov [es:bx], al
-	cmp ah, 0Dh;Enter - конец ввода
-	jz _end
+	mov byte [es:bx], al
+	;Enter - конец ввода
+	cmp ah, 1Ch
+	jz _end_2
 	mov ah, 0eh
+	mov dx, bx
 	mov bl, 07h
 	int 10h
+	mov bx, dx
 	add bx, 01h
-	jo next_segment_2
-next_segment_2:
-	mov ax, es
-	add ax, 1000h
-	mov es, ax
 	jmp near next_char_2
 _end_2:
-	popa
-	ret	
+	jmp return	
 ;================================
 Write_number_hex:
 ;Число в DX:AX
@@ -112,8 +98,12 @@ Write_number_hex:
 	mov [_DX], dx
 	xor cx, cx
 _next_num:
-	mov si, cx
-	mov ax, word [si + _DX]
+	add cx, _DX
+	push bx
+	mov cx, bx
+	mov al, [bx]
+	pop bx
+	sub cx, _DX
 	mov ah, 0eh
 	mov bl, 07h
 	int 10h
@@ -121,7 +111,7 @@ _next_num:
 	cmp cx, 04h
 	jnz _next_num
 	popa
-	ret
+	jmp return
 ;================================
 Read_number_hex:
 ;Число в DX:AX
@@ -137,7 +127,7 @@ _next_num_read:
 	jb _num_b
 	stc
 	popa
-	ret
+	jmp return
 _num_a:
 	sub al, 30h
 	jmp _end_num
@@ -146,13 +136,21 @@ _num_b:
 	add al, 0Ah
 	jmp _end_num
 _end_num:
-	mov si, cx
-	mov [bx + si], al
+	add cx, _DX
+	push bx
+	mov bx, cx
+	mov byte [bx], al
+	pop bx
+	sub cx, _DX
 	cmp cx, 04h
 	jnz _next_num_read
 	popa
-	ret
-ax_ 						dw 0000h
-cx_ 						dw 0000h
-_DX 						dw 00h
-_AX 						dw 00h
+	jmp return
+_DX dw 00h
+_AX dw 00h
+
+cx_ dw 00h
+ax_ dw 00h
+ss_ dw 00h
+sp_ dw 00h
+bp_ dw 00h

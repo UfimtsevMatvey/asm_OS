@@ -6,8 +6,10 @@ org 0000h
 %define Flag_free_segment	0x0000
 %define Flag_busy_segment	0x0001
 %define NULL				0xFFFF
-%define shell_offset 		0x0000
-%define shell_segment 		0x2000
+%define shell_offset 		0x2000
+%define shell_segment 		0x1D00
+%define int_23h_offset 		0x0000
+%define int_23h_segment 	0x0900
 ; Описание
 ;1  Преход в защищенный режим(НЕ ПОДДЕРЖИВАЕТСЯ)
 ;2  
@@ -19,14 +21,15 @@ org 0000h
 ;8  Возврат управления вызвавшей программе
 
 start:
-	cli
-	mov [cx_] , cx
-	mov [ax_] , ax
+	push ax
+	push cx
 	mov cx , cs
 	mov	ss , cx
 	mov es , cx
 	mov	ds , cx
-	sti
+	pop cx
+	pop ax
+	
 	mov ax , word [ax_]
 	mov cx , word [cx_]
 	cmp ah, 08h

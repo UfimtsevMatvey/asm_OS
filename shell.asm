@@ -10,8 +10,8 @@ org 0000h
 
 %define BUF_offset			0x0500
 %define BUF_segment 		0x0000
-%define STACK_offset		0x0000
-%define STACK_segment		0x2000
+%define STACK_offset		0x2000
+%define STACK_segment		0x1D00
 %define shell_offset 		0x0000
 %define shell_segment 		0x2000
 %define program_offset 		0x0100
@@ -20,14 +20,24 @@ start:
 	cli
 	mov ax, shell_segment
 	mov ds, ax
-	mov ax, STACK_segment
-	mov ss, ax
-	mov sp, STACK_offset
+	; mov ax, STACK_segment
+	; mov ss, ax
+	; mov sp, STACK_offset
 	sti
 	;Начальное положение курсора
+	
+	mov al, 03h
+	mov ah, 00h
+	int 10h
+	mov bh, 0h
 	mov ah, 02h
 	xor dx, dx
 	int 10h
+	mov bh, 0h 
+	mov ah, 03h
+	int 10h
+	mov dl, [Cursor_dislocation+1]
+	mov dh, [Cursor_dislocation]
 	jmp skip_first_slide_screen
 next_comand:
 	
@@ -41,6 +51,7 @@ next_comand:
 	jb slide_curent_screen_global_func
 _point_back_global_lable:
 	mov ah, 02h
+	mov bh, 00h
 	int 10h
 skip_first_slide_screen:
 
@@ -50,8 +61,11 @@ skip_first_slide_screen:
 	mov es, ax
 	mov ah, 02h
 	int 22h
+	mov ax, cs
+	mov ds, ax
 	;Анализ введенной строки
 	add bx, 01h
+	mov bx, String_buffer
 	mov di, bx
 	xor cx, cx
 	mov si, Comand_name_ls+1
@@ -80,6 +94,7 @@ skip_first_slide_screen:
 	jz Comand_execute_delete
 	
 Comand_execute_ls:
+	;jmp Get_list_file
 	call Get_list_file
 	jmp next_comand
 Comand_execute_cls:
@@ -96,7 +111,7 @@ Comand_execute_start:
 	mov ah, 01h
 	int 21h
 	jc del_file_error
-	;Передача управления программе (Возврат управления происходит в начало shell.usr )
+	;Передача управления программе (Возврат управления происходит в начало shell.usr)
 	push word program_segment
 	push word program_offset
 	retf
@@ -147,21 +162,42 @@ Get_list_file:
 	adc dx , cx
 	
 ;Загрузим корневой каталог в память	
+
 	mov dx, ax
-	mov cx, 14d
+	push ax
+	mov ax, cs
+	mov ds, ax
+	pop ax
+	add ax, 14d
+	mov [Number_end_sector_root_dir], ax
+	sub dx, 01h
+	mov [counter_sector], dx
+_next_sector_root_dir:
+	mov ax, cs
+	mov ds, ax
+	mov dx, [counter_sector]
+	add dx, 01h
+	mov [counter_sector], dx
+	cmp dx, [Number_end_sector_root_dir]
+	jz End_root_dir
+	mov cx, 01h
 	mov bx, BUF_offset
 	mov ax, BUF_segment
 	mov es, ax
 	mov ah, 04h
 	int 21h
 	
+	mov bx, BUF_offset
+	mov ax, BUF_segment
+	mov es, ax
+	
 ;Просканируем корневой каталог
-	mov dx, 224d
+	mov dx, 10h
 	mov di, bx
 	sub di, 20h
 next_description:
 	sub dx, 01h
-	jz End_root_dir
+	jz _next_sector_root_dir
 	push dx
 	add di, 20h
 	xor al, al
@@ -173,21 +209,24 @@ next_description:
 	jmp next_description
 Print_file_name:
 ;DH,DL = строка, колонка
+	mov bh, 0h
 	mov ah, 03h
 	int 10h
-	mov dl, [Cursor_dislocation+1]
-	mov dh, [Cursor_dislocation]
 	xor dl, dl
 	add dh, 01h
 	cmp dh, 25
-	jb slide_curent_screen
+	jnb slide_curent_screen
 _point_back:
+	mov bh, 0h
 	mov ah, 02h
 	int 10h
 	
 	
 	mov ah, 01h
+	sub di, 01h
 	int 22h
+	mov ax, cs
+	mov ds, ax
 	pop dx
 	jmp next_description
 End_root_dir:
@@ -199,6 +238,7 @@ slide_curent_screen:
 	mov dl, 80-1
 	mov al, 01h
 	xor bx, bx
+	mov bh, 0h
 	mov ah, 06h
 	int 10h
 	pop dx
@@ -214,6 +254,8 @@ del_file_error:
 	int 22h
 	jmp next_comand
 ;===================================
+counter_sector				dw	00h
+Number_end_sector_root_dir	dw	00h
 Shell_char					db	'>'
 Cursor_dislocation 			dw	00h
 BPB_HiddSec 				dd	00h

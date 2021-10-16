@@ -21,7 +21,7 @@ BS_ResNT    		db 0    	; Зарезервировано для Windows NT
 BS_BootSig  		db 29h  	; Сигнатура расширения
 BS_VolID    		dd 2a876CE1h    ; Серийный номер тома
 BS_VolLab   		db 'X boot disk'    ; 11 байт, метка тома
-BS_FilSysType   	db 'FAT16   '   ; 8 байт, тип ФС
+BS_FilSysType   	db 'FAT12   '   ; 8 байт, тип ФС
 
 SysSize:	resd 1	; Размер системной области FAT
 	fails:	resd 1	; Число неудачных попыток при чтении
