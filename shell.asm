@@ -1,6 +1,7 @@
 BITS 16
 section .text
 org 0000h
+%define shell_char			'>'
 %define BPB_BytsPerSec 		0x200	; Байт на сектор
 %define BPB_SecPerClus  	1    	; Секторов на кластер
 %define BPB_RsvdSecCnt   	1    	; Число резервных секторов
@@ -29,26 +30,38 @@ start:
 	mov al, 03h
 	mov ah, 00h
 	int 10h
+
 	mov bh, 0h
 	mov ah, 02h
 	xor dx, dx
 	int 10h
-	mov bh, 0h 
-	mov ah, 03h
+	;mov bh, 0h 
+	or ah, 01h ;ah = ah + 1 (ah = 2)
 	int 10h
-	mov dl, [Cursor_dislocation+1]
-	mov dh, [Cursor_dislocation]
+
+	;print '>'
+	;mov al, shell_char
+	;mov	ah, 0eh
+	;mov	bl, 7
+	;int	10h
+
+	mov dh, byte [Cursor_row]
+	mov dl, byte [Cursor_col]
 	jmp skip_first_slide_screen
 next_comand:
-	
+	;print '>'
+	mov al, shell_char
+	mov	ah, 0eh
+	mov	bl, 7
+	int	10h
 	mov ah, 03h
 	int 10h
-	mov dl, [Cursor_dislocation+1]
-	mov dh, [Cursor_dislocation]
-	xor dl, dl
-	add dh, 01h
-	cmp dh, 25
-	jb slide_curent_screen_global_func
+	mov dh, byte [Cursor_row]
+	mov dl, byte [Cursor_col]
+	;xor dl, dl
+	;add dh, 01h
+	cmp dh, 24
+	ja slide_curent_screen_global_func
 _point_back_global_lable:
 	mov ah, 02h
 	mov bh, 00h
@@ -66,6 +79,7 @@ skip_first_slide_screen:
 	;Анализ введенной строки
 	add bx, 01h
 	mov bx, String_buffer
+
 	mov di, bx
 	xor cx, cx
 	mov si, Comand_name_ls+1
@@ -139,11 +153,13 @@ slide_curent_screen_global_func:
 	xor cx, cx
 	mov dh, 25-1
 	mov dl, 80-1
-	mov al, 01h
+	mov al, 25
 	xor bx, bx
 	mov ah, 06h
 	int 10h
 	pop dx
+	;additional shift cursor
+	add dh, 1
 	jmp _point_back_global_lable
 ;===================================
 ;=Получить список файлов на дисплей=
@@ -215,23 +231,29 @@ Print_file_name:
 	xor dl, dl
 	add dh, 01h
 	cmp dh, 25
+	mov [Cursor_row], dh
+	mov [Cursor_col], dl
 	jnb slide_curent_screen
 _point_back:
+
 	mov bh, 0h
 	mov ah, 02h
 	int 10h
-	
-	
+
+	;push dx
 	mov ah, 01h
 	sub di, 01h
 	int 22h
 	mov ax, cs
 	mov ds, ax
 	pop dx
+
+
 	jmp next_description
 End_root_dir:
 	ret
 slide_curent_screen:
+	jmp _point_back
 	push dx
 	xor cx, cx
 	mov dh, 25-1
@@ -253,11 +275,18 @@ del_file_error:
 	mov ax, 01h
 	int 22h
 	jmp next_comand
+
+print_char:
+	mov	ah, 0eh
+	mov	bl, 7
+	int	10h
+	ret
 ;===================================
 counter_sector				dw	00h
 Number_end_sector_root_dir	dw	00h
-Shell_char					db	'>'
-Cursor_dislocation 			dw	00h
+
+Cursor_row 			db	00h
+Cursor_col 			db	00h
 BPB_HiddSec 				dd	00h
 Size_FAT 					dw	00h
 Size_root_dir 				dw	00h
