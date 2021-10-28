@@ -2,8 +2,8 @@ BITS 16
 section .text
 org 7c00h
 jmp near start
-;nop
-BS_OEMName  		db 'ShapeOS '
+nop
+BS_OEMName db 'FDSSJFUE'
 BPB_BytsPerSec  	dw 0x200    ; Байт на сектор
 BPB_SecPerClus  	db 1    	; Секторов на кластер
 BPB_RsvdSecCnt  	dw 1    	; Число резервных секторов
@@ -11,7 +11,7 @@ BPB_NumFATs 		db 2    	; Количество копий FAT
 BPB_RootEntCnt  	dw 224  	; Элементов в корневом каталоге (max)
 BPB_TotSec16    	dw 2880 	; Всего секторов или 0
 BPB_Media   		db 0xF0 	; код типа устройства
-BPB_FATsz16 		dw 9    	; Секторов на элемент таблицы FAT
+BPB_FATsz16 		dw 18    	; Секторов на элемент таблицы FAT
 BPB_SecPerTrk   	dw 9   	; Секторов на дорожку
 BPB_NumHeads    	dw 2    	; Число головок
 BPB_HiddSec 		dd 0    	; Скрытых секторов
@@ -19,8 +19,8 @@ BPB_TotSec32    	dd 0    	; Всего секторов или 0
 BS_DrvNum   		db 0   		; Номер диска для прерывания int 0x13
 BS_ResNT    		db 0    	; Зарезервировано для Windows NT
 BS_BootSig  		db 29h  	; Сигнатура расширения
-BS_VolID    		db "seri"    ; Серийный номер тома
-BS_VolLab   		db 'MYVOLUME   '    ; 11 байт, метка тома
+BS_VolID dd 2a876CE1h ; Серийный номер тома
+BS_VolLab db 'X boot disk' ; 11 байт, метка
 BS_FilSysType   	db 'FAT12   '   ; 8 байт, тип ФС
 
 SysSize:	resd 1	; Размер системной области FAT

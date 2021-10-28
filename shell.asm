@@ -85,28 +85,33 @@ skip_first_slide_screen:
 	mov si, Comand_name_ls+1
 	mov cl, byte [Comand_name_ls]
 	repe cmpsb
+	cmp cx, 0
 	jz Comand_execute_ls
 	
 	mov si, Comand_name_cls+1
 	mov cl, byte [Comand_name_cls]
 	repe cmpsb
+	cmp cx, 0
 	jz Comand_execute_cls
 	
 	mov si, Comand_name_start+1
 	mov cl, byte [Comand_name_start]
 	repe cmpsb
+	cmp cx, 0
 	jz Comand_execute_start
 	
 	mov si, Comand_name_create_file+1
 	mov cl, byte [Comand_name_create_file]
 	repe cmpsb
+	cmp cx, 0
 	jz Comand_execute_create_file
 	
 	mov si, Comand_name_delete+1
 	mov cl, byte [Comand_name_delete]
 	repe cmpsb
+	cmp cx, 0
 	jz Comand_execute_delete
-	
+	jmp next_comand
 Comand_execute_ls:
 	;jmp Get_list_file
 	call Get_list_file
