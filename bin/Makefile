@@ -3,8 +3,14 @@ ASMFLAGS = -fbin
 
 all: ker
 	
-ker: boot.bin KERNELOS.sys int_21h.sys int_22h.sys int_23h.sys shell.usr
+ker: image.img KERNELOS.sys int_21h.sys int_22h.sys int_23h.sys shell.usr
+	mcopy -i image.img *.sys *.usr ::/
+	dd if=boot.bin of=image.img conv=notrunc
 
+image.img: boot.bin
+	dd bs=512 count=2880 if=/dev/zero of=image.img
+	mkfs.msdos image.img
+	
 boot.bin:
 	$(ASM) $(ASMFLAGS) ../boot.asm -o boot.bin
 
@@ -24,4 +30,4 @@ shell.usr:
 	$(ASM) $(ASMFLAGS) ../shell.asm -o shell.usr
 
 clean:
-	rm -rf *.sys *.bin *.usr
+	rm -rf *.sys *.bin *.usr *.img
